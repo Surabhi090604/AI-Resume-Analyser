@@ -1,0 +1,17 @@
+{
+  "$schema": "https://railway.app/schemas/project.json",
+  "plugins": {
+    "node": {
+      "path": ".",
+      "installCommand": "npm install",
+      "startCommand": "npm run start"
+    }
+  },
+  "variables": [
+    "PORT",
+    "OPENAI_API_KEY",
+    "MONGODB_URI",
+    "CLIENT_URL"
+  ]
+}
+

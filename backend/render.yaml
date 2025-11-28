@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: resume-analyzer-backend
+    env: node
+    plan: starter
+    region: oregon
+    buildCommand: npm install
+    startCommand: npm run start
+    rootDir: backend
+    envVars:
+      - key: PORT
+        value: 3000
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: MONGODB_URI
+        sync: false
+      - key: CLIENT_URL
+        sync: false
+
