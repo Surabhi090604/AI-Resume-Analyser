@@ -1,71 +1,127 @@
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
+import axios from 'axios';
 
-async function handleResponse(res) {
-  if (!res.ok) {
-    const errorBody = await res.json().catch(() => ({}));
-    const message = errorBody.error || res.statusText || 'Request failed';
-    throw new Error(message);
+// Use environment variable or default to localhost
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+
+console.log('[API] Using base URL:', API_BASE);
+
+export const uploadResume = async ({ file, user }) => {
+  try {
+    console.log('[UPLOAD] Sending file to:', `${API_BASE}/upload`);
+    
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    // Add user info if provided
+    if (user?.email) {
+      formData.append('userEmail', user.email);
+    }
+    if (user?.name) {
+      formData.append('userName', user.name);
+    }
+
+    const response = await axios.post(`${API_BASE}/upload`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+      timeout: 30000, // 30 second timeout
+    });
+    
+    console.log('[UPLOAD] Response:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('[UPLOAD] Error:', error.response?.data || error.message);
+    throw new Error(error.response?.data?.error || error.message || 'Upload failed');
   }
-  return res.json();
-}
+};
 
-export async function uploadResume({ file, user }) {
-  const form = new FormData();
-  form.append('file', file);
-  if (user?.email) form.append('userEmail', user.email);
-  if (user?.name) form.append('userName', user.name);
+export const analyzeResume = async (analysisId, jobDescription, resumeText) => {
+  try {
+    console.log('[ANALYZE] Sending request to:', `${API_BASE}/analyze`);
+    
+    const response = await axios.post(`${API_BASE}/analyze`, {
+      analysisId,
+      jobDescription,
+      resumeText,
+    }, {
+      timeout: 60000, // 60 second timeout for LLM
+    });
+    
+    console.log('[ANALYZE] Response:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('[ANALYZE] Error:', error.response?.data || error.message);
+    throw new Error(error.response?.data?.error || error.message || 'Analysis failed');
+  }
+};
 
-  const res = await fetch(`${API_BASE_URL}/api/upload`, {
-    method: 'POST',
-    body: form
-  });
-  return handleResponse(res);
-}
+export const getHistory = async (userId) => {
+  try {
+    const response = await axios.get(`${API_BASE}/history/${userId}`);
+    return response.data;
+  } catch (error) {
+    throw new Error(error.response?.data?.error || error.message);
+  }
+};
 
-export async function runAnalysis({ analysisId, jobDescription, text, user }) {
-  const res = await fetch(`${API_BASE_URL}/api/analyze`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
+// Fetch analysis by ID
+export const fetchAnalysis = async (analysisId) => {
+  try {
+    const response = await axios.get(`${API_BASE}/analysis/${analysisId}`);
+    return response.data;
+  } catch (error) {
+    throw new Error(error.response?.data?.error || error.message || 'Failed to fetch analysis');
+  }
+};
+
+// Fetch history by email or userId
+export const fetchHistory = async ({ userId, email }) => {
+  try {
+    if (email) {
+      const response = await axios.get(`${API_BASE}/history`, {
+        params: { email }
+      });
+      return response.data;
+    } else if (userId) {
+      const response = await axios.get(`${API_BASE}/history/${userId}`);
+      return response.data;
+    }
+    return [];
+  } catch (error) {
+    throw new Error(error.response?.data?.error || error.message || 'Failed to fetch history');
+  }
+};
+
+// Run analysis (alias for analyzeResume with different parameter structure)
+export const runAnalysis = async ({ analysisId, jobDescription, text, user }) => {
+  try {
+    const response = await axios.post(`${API_BASE}/analyze`, {
       analysisId,
       jobDescription,
       text,
       userEmail: user?.email,
       userName: user?.name
-    })
-  });
-  return handleResponse(res);
-}
-
-export async function fetchAnalysis(id) {
-  const res = await fetch(`${API_BASE_URL}/api/analysis/${id}`);
-  return handleResponse(res);
-}
-
-export async function fetchHistory({ userId, email }) {
-  if (userId) {
-    const res = await fetch(`${API_BASE_URL}/api/history/${userId}`);
-    return handleResponse(res);
+    }, {
+      timeout: 60000
+    });
+    return response.data;
+  } catch (error) {
+    throw new Error(error.response?.data?.error || error.message || 'Analysis failed');
   }
-  if (!email) return [];
-  const url = new URL(`${API_BASE_URL}/api/history`);
-  url.searchParams.append('email', email);
-  const res = await fetch(url);
-  return handleResponse(res);
-}
+};
 
-export async function fetchStats(userId) {
-  if (!userId) return null;
-  const res = await fetch(`${API_BASE_URL}/api/stats/${userId}`);
-  return handleResponse(res);
-}
-
-export async function sendChatMessage({ message, context }) {
-  const res = await fetch(`${API_BASE_URL}/api/chat`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ message, context })
-  });
-  return handleResponse(res);
-}
+// Send chat message
+export const sendChatMessage = async ({ message, context }) => {
+  try {
+    const response = await axios.post(`${API_BASE}/chat`, {
+      message,
+      context
+    }, {
+      timeout: 30000
+    });
+    return response.data;
+  } catch (error) {
+    throw new Error(error.response?.data?.error || error.message || 'Chat request failed');
+  }
+};
 

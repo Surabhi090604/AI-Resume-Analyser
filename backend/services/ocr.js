@@ -1,6 +1,7 @@
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
-const pdf = require('pdf-parse');
+// Import pdf-parse using require (CommonJS module)
+const { PDFParse } = require('pdf-parse');
 import Tesseract from 'tesseract.js';
 const mammoth = require('mammoth');
 
@@ -20,12 +21,18 @@ export async function extractTextFromFile({ buffer, mimetype }) {
   // PDF
   if (mimetype === 'application/pdf') {
     try {
-      const data = await pdf(buffer);
-      if (data && data.text && data.text.trim()) {
-        return data.text;
+      // Use PDFParse class from pdf-parse
+      const parser = new PDFParse({ data: buffer });
+      const result = await parser.getText();
+      if (result && result.text && result.text.trim()) {
+        return result.text;
       }
     } catch (e) {
       console.warn('pdf-parse failed:', e.message || e);
+      // Note: Tesseract cannot directly process PDFs - it needs images
+      // For scanned PDFs, they would need to be converted to images first
+      // For now, we'll just return empty and let the user know
+      console.warn('PDF text extraction failed. If this is a scanned PDF, please convert it to images first.');
     }
   }
 

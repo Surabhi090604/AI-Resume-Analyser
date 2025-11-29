@@ -46,6 +46,12 @@ router.post('/upload', upload.single('file'), async (req, res) => {
 
     const text = await extractTextFromFile({ buffer: file.buffer, mimetype: file.mimetype });
 
+    if (!text || text.trim().length === 0) {
+      return res.status(400).json({ 
+        error: 'Could not extract text from file. The file might be corrupted, password-protected, scanned (image-based PDF), or in an unsupported format. Please try a different file, convert scanned PDFs to images, or paste the text manually.' 
+      });
+    }
+
     const heuristics = buildHeuristicInsights(text, '');
 
     let analysis = null;
@@ -107,7 +113,11 @@ router.post('/analyze', async (req, res) => {
       }
     }
 
-    if (!extractedText) return res.status(400).json({ error: 'no text to analyze' });
+    if (!extractedText || extractedText.trim().length === 0) {
+      return res.status(400).json({ 
+        error: 'No text to analyze. Please upload a resume file or paste the resume text manually.' 
+      });
+    }
 
     const llmResult = await analyzeWithLLM(extractedText, jobDescription || '');
     const parsed = llmResult.parsed || buildHeuristicInsights(extractedText, jobDescription || '');
